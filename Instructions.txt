@@ -1,0 +1,7 @@
+Run main.py on linux
+
+data.txt file contain: oxide_thickness, channel_thickness, no_of_samples_for_Ec_from_poisson(oxide+channel), Vg, N_D
+
+input_parameters.txt file contain : Vg, oxide_thickness, channel_thickness, m_gate/m_e, m_oxide/m_e, m_channel/m_e, no_energy_slices_for_landuers_formula(need not edit, updated by T_E.c)
+
+Vg.txt file contain: Vg
