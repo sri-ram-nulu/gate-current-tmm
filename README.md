@@ -1,3 +1,67 @@
+## Part 1: 1D Non-Linear Poisson Solver for MOS Structures
+**Developer:** Vantaku Sai Yashwant
+
+
+This repository contains a C-based numerical solver that self-consistently solves the 1D non-linear Poisson equation for a Metal-Oxide-Semiconductor (MOS) structure consisting of Silicon Dioxide (SiO2) and Silicon (Si). 
+
+The code uses a finite difference discretization scheme combined with the **Newton-Raphson method** to handle the non-linear carrier concentration terms. The resulting tridiagonal system of linear equations at each iteration is solved efficiently using the **Thomas Algorithm**.
+
+## Features
+
+* **Self-Consistent Solution:** Solves the non-linear Poisson equation taking into account mobile electron and hole densities as functions of local electrostatic potential.
+* **Heterostructure Support:** Handles the abrupt dielectric interface between the oxide (SiO2) and the semiconductor (Si).
+* **Efficient Linear Algebra:** Implements the O(N) Thomas algorithm for fast tridiagonal matrix inversion.
+* **Automated Data Output:** Generates formatted text files tracking spatial profiles of potential, electric displacement fields, and energy band alignments.
+
+---
+## Input Data Format
+
+The application expects an input configuration file named `data` in the same directory as the executable. The file must contain a single line with space-separated values corresponding to the physical parameters:
+
+```text
+<tox> <tsi> <N> <Vg> <Nd>
+```
+## Numerical Discretization and Matrix Formulation
+
+To solve the non-linear Poisson equation numerically, the continuous domain is discretized into a uniform spatial grid with a spacing of $\Delta x = \text{del1}$.
+
+### 1. Discretized Finite Difference Equation
+Using a central difference scheme, the continuous differential equation for a variable permittivity $\epsilon(x)$ at an internal grid node $i$ is discretized as:
+
+$$\frac{\epsilon_{i+1/2} \left(\psi_{i+1} - \psi_i\right) - \epsilon_{i-1/2} \left(\psi_i - \psi_{i-1}\right)}{\Delta x^2} = -\rho(\psi_i)$$
+
+Approximating the half-grid permittivities as linear averages, $\epsilon_{i+1/2} \approx \frac{\epsilon_{i+1} + \epsilon_i}{2}$ and $\epsilon_{i-1/2} \approx \frac{\epsilon_i + \epsilon_{i-1}}{2}$, the expression becomes:
+
+$$\frac{\epsilon_i + \epsilon_{i-1}}{2\Delta x^2}\psi_{i-1} - \frac{\epsilon_{i+1} + 2\epsilon_i + \epsilon_{i-1}}{2\Delta x^2}\psi_i + \frac{\epsilon_{i+1} + \epsilon_i}{2\Delta x^2}\psi_{i+1} = -\rho(\psi_i)$$
+
+### 2. Newton-Raphson Iteration System
+Because the charge density $\rho(\psi)$ depends non-linearly on the potential, the Newton-Raphson method solves for a correction factor $\Delta \psi$ at iteration step $k+1$, where $\psi^{k+1} = \psi^k + \Delta \psi$. 
+
+The linear system at each iteration is organized into a tridiagonal matrix format:
+
+$$a_i \Delta\psi_{i-1} + b_i \Delta\psi_i + c_i \Delta\psi_{i+1} = d_i$$
+
+Where the coefficients mapped in `jacobian_and_d()` are defined as:
+
+* **Subdiagonal ($a_i$):**
+  $$a_i = \frac{\epsilon_i + \epsilon_{i-1}}{2\Delta x^2}$$
+
+* **Superdiagonal ($c_i$):**
+  $$c_i = \frac{\epsilon_i + \epsilon_{i+1}}{2\Delta x^2}$$
+
+* **Main Diagonal ($b_i$):**
+  $$b_i = -\frac{\epsilon_{i+1} + 2\epsilon_i + \epsilon_{i-1}}{2\Delta x^2} + \left. \frac{\partial \rho}{\partial \psi} \right|_{\psi_i}$$
+
+* **Residual Vector ($d_i$):**
+  $$d_i = -a_i \psi_{i-1}^k + \left(\frac{\epsilon_{i+1} + 2\epsilon_i + \epsilon_{i-1}}{2\Delta x^2}\right)\psi_i^k - c_i \psi_{i+1}^k + \rho(\psi_i^k)$$
+
+### 3. Charge Density Derivatives
+Inside the semiconductor region ($x > w_1$), the derivative term added to the main diagonal $b_i$ accounts for mobile carrier adjustments:
+
+$$\frac{\partial \rho}{\partial \psi} = -\frac{q^2}{k_B T} \left( \frac{n_i^2}{N_c e^{-\frac{q\psi}{k_B T}}} + N_c e^{-\frac{q\psi}{k_B T}} \right)$$
+
+Inside the oxide insulating layer ($x \le w_1$), the carrier concentration and its derivative evaluate to zero ($factor = 0$, $r = 0$).
+
 ## Part 2: Calculating Quantum Transmission Coefficient T(E)
 **Developer:** Sri Ram Nulu
 
@@ -92,3 +156,8 @@ To verify the numerical stability and physical accuracy of the TMM solver, the p
 1. **Transmission Probability T(E) is always $\le$ 1** 
 2. **Regime Behaviours:** In test case 1, Transmission probability plot perfectly demonstrates evanescent tunneling regime behaviour for $`E < V`$ and propagation regime behaviour for $`E > V`$.
 3. **Quantum Symmetry and Reciprocity:** In test case 2 & 3, despite the structural inversion of the system, the system satisfies quantum reciprocity ($`T_{\text{left}\rightarrow\text{right}} = T_{\text{right}\rightarrow\text{left}}`$). Therefore the TMM solver follows the "Reciprocity Theorem".
+
+## Part 3: Leakage current density using Tsu-Esaki Framework:
+**Developer:** Vantaku Sai Yashwant, Sanjith, Yashashwi Sriram, K.Mahendar
+
+We followed the following references for the implementation [Tsu-Esaki Framework](https://www.iue.tuwien.ac.at/phd/gehring/node36.html),[Supply-funtion Modelling](https://www.iue.tuwien.ac.at/phd/gehring/node38.html)
